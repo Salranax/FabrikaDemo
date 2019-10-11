@@ -19,6 +19,7 @@ using UnityEngine;
 public class Line : MonoBehaviour
 {	
 	public GameObject wheelPrefab;
+	public GameObject WheelModelPrefab;
 	[HideInInspector]
 	Mesh mesh;
 
@@ -39,6 +40,12 @@ public class Line : MonoBehaviour
 	//Point Management
 	private Vector2[] wheelPoints = new Vector2[2];
 	private Vector2 RespawnCoordinate;
+
+	WheelCollider wheelColliderOne;
+	WheelCollider wheelColliderTwo;
+
+	GameObject wheelObjectOne;
+	GameObject wheelObjectTwo;
 	//
 
 	[Range(0,5000)]
@@ -61,9 +68,29 @@ public class Line : MonoBehaviour
 		halfWidth = lineRenderer.endWidth / 2.0f;
 	}
 
-	public void generateCar(){
-		//MeshGenerator.instance.setPoints(points);
+	void FixedUpdate() {
+		if(wheelObjectTwo != null){
+			UpdateWheelPoses();
+		}
+	}
 
+		private void UpdateWheelPoses(){
+		UpdateWheelPose(wheelColliderOne, wheelObjectOne.transform);
+		UpdateWheelPose(wheelColliderTwo, wheelObjectTwo.transform);
+	}
+
+	private void UpdateWheelPose(WheelCollider _collider, Transform _transform)
+	{
+		Vector3 _pos = _transform.position;
+		Quaternion _quat = _transform.rotation;
+
+		_collider.GetWorldPose(out _pos, out _quat);
+
+		_transform.position = _pos;
+		_transform.rotation = _quat;
+	}
+
+	public void generateCar(){
 		placeWheels();
 		RespawnCoordinate = findMidPoint();
 
@@ -76,8 +103,7 @@ public class Line : MonoBehaviour
 
 		rigidBody.isKinematic = false;
 		GetComponent<MeshCollider>().convex = true;
-		//TODO: Add Wheels, spawn the car
-        //Find Its mid point
+
 	}
 
 	public Vector2[] findWheelPoints(){
@@ -122,6 +148,24 @@ public class Line : MonoBehaviour
 
 		wheelOne.transform.position = points[0];
 		wheelTwo.transform.position = points[points.Count-1];
+
+		wheelColliderOne = wheelOne.transform.GetChild(0).GetComponent<WheelCollider>();
+		wheelColliderTwo = wheelTwo.transform.GetChild(0).GetComponent<WheelCollider>();
+
+		wheelColliderOne.steerAngle = 90;
+		wheelColliderTwo.steerAngle = 90;
+		wheelColliderOne.motorTorque = 5;
+		wheelColliderTwo.motorTorque = 5;
+
+		wheelObjectOne = Instantiate(WheelModelPrefab) as GameObject;
+		wheelObjectTwo = Instantiate(WheelModelPrefab) as GameObject;
+
+		wheelObjectOne.transform.SetParent(this.transform);
+		wheelObjectTwo.transform.SetParent(this.transform);
+
+		wheelObjectOne.transform.position = points[0];
+		wheelObjectTwo.transform.position = points[points.Count-1];
+
 	}
 
 	public Vector2 findMidPoint(){
@@ -164,32 +208,9 @@ public class Line : MonoBehaviour
 		points.Add (point);
 		lineRenderer.positionCount++;
 		lineRenderer.SetPosition (lineRenderer.positionCount - 1, point);
-
-		// if (autoAddColliderPoint) {
-		// 	//Add the point to the collider of the line
-		// 	AddPointToCollider (points.Count - 1);
-		// }
 	}
 
 	public bool ReachedPointsLimit(){
 		return points.Count >= maxPoints;
 	}
-
-	// public void AddPointToCollider (int index)
-	// {
-	// 	direction = points [index] - points [index + 1 < points.Count ? index + 1 : (index - 1 >= 0 ? index - 1 : index)];
-	// 	angle = Mathf.Atan2 (direction.x, -direction.y);
-
-	// 	tempVector = points [index];
-	// 	tempVector.x = tempVector.x + halfWidth * Mathf.Cos (angle);
-	// 	tempVector.y = tempVector.y + halfWidth * Mathf.Sin (angle);
-	// 	polygon2DPoints.Insert (polygon2DPoints.Count, tempVector);
-
-	// 	tempVector = points [index];
-	// 	tempVector.x = tempVector.x - halfWidth * Mathf.Cos (angle);
-	// 	tempVector.y = tempVector.y - halfWidth * Mathf.Sin (angle);
-	// 	polygon2DPoints.Insert (0, tempVector);
-
-	// 	polygonCollider2D.points = polygon2DPoints.ToArray ();
-	// }
 }
