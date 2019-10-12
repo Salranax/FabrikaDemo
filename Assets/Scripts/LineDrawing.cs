@@ -56,7 +56,7 @@ public class LineDrawing : MonoBehaviour
 	}
 
     private bool isMouseOverDrawTable(){
-        return EventSystem.current.IsPointerOverGameObject();
+        return EventSystem.current.IsPointerOverGameObject(0);
     }
 
     //Line Generation
