@@ -48,6 +48,7 @@ public class LineDrawing : MonoBehaviour
 
 		if (currentLine != null) {
 			currentLine.AddPoint (Camera.main.ScreenToWorldPoint (new Vector3(Input.mousePosition.x,Input.mousePosition.y - 200, 0)));
+
 			if (currentLine.ReachedPointsLimit ()) {
 				EnableLine();
 			}

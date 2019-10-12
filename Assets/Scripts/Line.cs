@@ -27,12 +27,14 @@ public class Line : MonoBehaviour
 	//Point Management
 	private Vector2[] wheelPoints = new Vector2[2];
 	private Vector2 RespawnCoordinate;
-
 	WheelCollider wheelColliderOne;
 	WheelCollider wheelColliderTwo;
-
 	GameObject wheelObjectOne;
 	GameObject wheelObjectTwo;
+
+	//Booster Variables
+	private float boosterTime;
+	private bool isBoostActive = false;
 
 	private GameManager _gm;
 	//
@@ -66,8 +68,19 @@ public class Line : MonoBehaviour
 	}
 
 	private void Update() {
-		if(isObjectActivated && transform.position.y < -5){
+		if(isObjectActivated && transform.localPosition.y < -5){
 			teleportToSpawnPoint();
+		}
+
+		if(isBoostActive){
+			boosterTime -= Time.deltaTime;
+			
+			if(boosterTime <= 0){
+				isBoostActive = false;
+				wheelColliderOne.motorTorque -= 10;
+				wheelColliderTwo.motorTorque -= 10;
+				boosterTime = 0;
+			}
 		}
 	}
 
@@ -88,21 +101,29 @@ public class Line : MonoBehaviour
 	}
 
 	public void generateCar(){
-		placeWheels();
-		RespawnCoordinate = findMidPoint();
-		this.GetComponent<BoxCollider>().center = points[points.Count - 1];
-
-		teleportToSpawnPoint();
-
+		transformPointsToZero();
 		mesh = new Mesh();
 		lineRenderer.BakeMesh(mesh, true);
 		GetComponent<MeshCollider>().sharedMesh = mesh;
 		GetComponent<MeshFilter>().mesh = mesh;
 
+		placeWheels();
+		RespawnCoordinate = findMidPoint();
+
+		newDrawnSpawn();
+
+		GetComponent<MeshCollider>().convex = true;
+
+		MeshCollider colMesh = gameObject.AddComponent<MeshCollider>();
+		colMesh.sharedMesh = mesh;
+		colMesh.convex = true;
+		colMesh.isTrigger = true;
+
 		_gm.setLine(this);
 
 		rigidBody.isKinematic = false;
-		GetComponent<MeshCollider>().convex = true;
+		
+		isObjectActivated = true;
 	}
 
 	public Vector2[] findWheelPoints(){
@@ -131,7 +152,6 @@ public class Line : MonoBehaviour
 		}
 
 		Vector2[] tmp = new Vector2[2]{pointOne, pointTwo};
-		Debug.Log(tmp[0] + " " + tmp[1]);
 		return tmp;
 	}
 
@@ -153,8 +173,8 @@ public class Line : MonoBehaviour
 
 		wheelColliderOne.steerAngle = 90;
 		wheelColliderTwo.steerAngle = 90;
-		wheelColliderOne.motorTorque = 50;
-		wheelColliderTwo.motorTorque = 50;
+		wheelColliderOne.motorTorque = 10;
+		wheelColliderTwo.motorTorque = 10;
 
 		wheelObjectOne = Instantiate(WheelModelPrefab) as GameObject;
 		wheelObjectTwo = Instantiate(WheelModelPrefab) as GameObject;
@@ -214,19 +234,80 @@ public class Line : MonoBehaviour
 	}
 
 	public void teleportToSpawnPoint(){
-		if(_gm.getActiveLineStatus()){
-			transform.position = _gm.getLine().getSpawnCoordinate();
+		transform.position = new Vector2(_gm.spawnPoint.transform.position.x, (_gm.spawnPoint.transform.position.y < 2 ? 2.7f : _gm.spawnPoint.transform.position.y));
+		GetComponent<Rigidbody>().velocity = Vector3.zero;
+		GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+		transform.eulerAngles = new Vector3(0,0,0);
+		Debug.Log(transform.position);
+	}
+
+	public void newDrawnSpawn(){
+		GetComponent<Rigidbody>().velocity = new Vector3(0,0,0);
+		if(!_gm.getActiveLineStatus()){
+			transform.position = new Vector2(_gm.spawnPoint.transform.position.x, (_gm.spawnPoint.transform.position.y < 2 ? 2.7f : _gm.spawnPoint.transform.position.y));
 		}
 		else{
-			transform.position = new Vector2(_gm.spawnPoint.transform.position.x - RespawnCoordinate.x, _gm.spawnPoint.transform.position.y - RespawnCoordinate.y);
+			transform.position = _gm.getLine().getSpawnCoordinate();
 		}
+		Debug.Log(transform.position);
 	}
 
 	public Vector3 getSpawnCoordinate(){
-		return new Vector3(transform.position.x - RespawnCoordinate.x, transform.position.y - RespawnCoordinate.y, transform.position.z);
+		return new Vector3(transform.position.x, transform.position.y < 2 ? 2.7f : transform.position.y, transform.position.z);
 	}
 
 	public void destroyGameObject(){
 		Destroy(this.gameObject);
+	}
+
+	public void setBoost(){
+		wheelColliderOne.motorTorque += 10;
+		wheelColliderTwo.motorTorque += 10;
+
+		isBoostActive = true;
+		boosterTime = 2f;
+
+	}
+
+	void OnTriggerEnter(Collider other)
+	{
+		Debug.Log(other);
+		if(other.gameObject.name.Contains("Booster")){
+			Debug.Log("Collided");
+		}
+	}
+
+	public void endTheGame(){
+		rigidBody.isKinematic = true;
+		UIManager.instance.endGame();
+	}
+
+	private void transformPointsToZero(){
+		List<Vector2> tmp = new List<Vector2>(points.Count);
+		Vector2 vectrTmp = new Vector2(Mathf.Floor(points[points.Count - 1].x), Mathf.Floor(points[points.Count - 1].y));
+
+		int count = 0;
+
+		foreach (Vector2 item in points)
+		{
+			if(points[count].x > 0){
+				if(points[count].y > 0){
+					lineRenderer.SetPosition(count,new Vector2(points[count].x - Mathf.Abs(vectrTmp.x), points[count].y - Mathf.Abs(vectrTmp.y)));
+					tmp.Add(new Vector2(points[count].x - Mathf.Abs(vectrTmp.x), points[count].y - Mathf.Abs(vectrTmp.y)));
+				}
+				else{
+					lineRenderer.SetPosition(count,new Vector2(points[count].x - Mathf.Abs(vectrTmp.x), points[count].y + Mathf.Abs(vectrTmp.y)));
+					tmp.Add(new Vector2(points[count].x - Mathf.Abs(vectrTmp.x), points[count].y + Mathf.Abs(vectrTmp.y)));
+				}
+
+			}
+			else{
+				lineRenderer.SetPosition(count,new Vector2(points[count].x + Mathf.Abs(vectrTmp.x), points[count].y + Mathf.Abs(vectrTmp.y)));
+				tmp.Add(new Vector2(points[count].x + Mathf.Abs(vectrTmp.x), points[count].y + Mathf.Abs(vectrTmp.y)));
+			}
+			count++;
+		}
+
+		points = tmp;
 	}
 }
