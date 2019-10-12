@@ -69,7 +69,7 @@ public class LineDrawing : MonoBehaviour
 
     //Enables Line functions
 	private void EnableLine ()
-	{   
+	{  	 
         CameraFollow.instance.setTarget(currentLine.gameObject);
 		currentLine.generateCar();
 

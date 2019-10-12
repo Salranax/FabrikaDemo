@@ -2,19 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/*
- * 2D Polygon Line Collider Package
- *
- * @license		    Unity Asset Store EULA https://unity3d.com/legal/as_terms
- * @author		    Indie Studio - Baraa Nasser
- * @Website		    https://indiestd.com
- * @Asset Store     https://www.assetstore.unity3d.com/en/#!/publisher/9268
- * @Unity Connect   https://connect.unity.com/u/5822191d090915001dbaf653/column
- * @email		    info@indiestd.com
- *
- */
-
-
 [RequireComponent(typeof(LineRenderer))]
 public class Line : MonoBehaviour
 {	
@@ -22,7 +9,7 @@ public class Line : MonoBehaviour
 	public GameObject WheelModelPrefab;
 	[HideInInspector]
 	Mesh mesh;
-
+	public bool isObjectActivated = false;
 	public List<Vector2> points;
 	private List<Vector2> polygon2DPoints;
 	private LineRenderer lineRenderer;
@@ -46,6 +33,8 @@ public class Line : MonoBehaviour
 
 	GameObject wheelObjectOne;
 	GameObject wheelObjectTwo;
+
+	private GameManager _gm;
 	//
 
 	[Range(0,5000)]
@@ -53,6 +42,8 @@ public class Line : MonoBehaviour
 
 	void Awake ()
 	{
+		_gm = GameManager.instance;
+
 		points = new List<Vector2> ();
 		polygon2DPoints = new List<Vector2> ();
 		lineRenderer = GetComponent<LineRenderer> ();
@@ -74,7 +65,13 @@ public class Line : MonoBehaviour
 		}
 	}
 
-		private void UpdateWheelPoses(){
+	private void Update() {
+		if(isObjectActivated && transform.position.y < -5){
+			teleportToSpawnPoint();
+		}
+	}
+
+	private void UpdateWheelPoses(){
 		UpdateWheelPose(wheelColliderOne, wheelObjectOne.transform);
 		UpdateWheelPose(wheelColliderTwo, wheelObjectTwo.transform);
 	}
@@ -93,17 +90,19 @@ public class Line : MonoBehaviour
 	public void generateCar(){
 		placeWheels();
 		RespawnCoordinate = findMidPoint();
+		this.GetComponent<BoxCollider>().center = points[points.Count - 1];
 
-		transform.position = new Vector2(GameManager.instance.spawnPoint.transform.position.x - RespawnCoordinate.x, GameManager.instance.spawnPoint.transform.position.y - RespawnCoordinate.y);
+		teleportToSpawnPoint();
 
 		mesh = new Mesh();
 		lineRenderer.BakeMesh(mesh, true);
 		GetComponent<MeshCollider>().sharedMesh = mesh;
 		GetComponent<MeshFilter>().mesh = mesh;
 
+		_gm.setLine(this);
+
 		rigidBody.isKinematic = false;
 		GetComponent<MeshCollider>().convex = true;
-
 	}
 
 	public Vector2[] findWheelPoints(){
@@ -154,8 +153,8 @@ public class Line : MonoBehaviour
 
 		wheelColliderOne.steerAngle = 90;
 		wheelColliderTwo.steerAngle = 90;
-		wheelColliderOne.motorTorque = 5;
-		wheelColliderTwo.motorTorque = 5;
+		wheelColliderOne.motorTorque = 50;
+		wheelColliderTwo.motorTorque = 50;
 
 		wheelObjectOne = Instantiate(WheelModelPrefab) as GameObject;
 		wheelObjectTwo = Instantiate(WheelModelPrefab) as GameObject;
@@ -212,5 +211,22 @@ public class Line : MonoBehaviour
 
 	public bool ReachedPointsLimit(){
 		return points.Count >= maxPoints;
+	}
+
+	public void teleportToSpawnPoint(){
+		if(_gm.getActiveLineStatus()){
+			transform.position = _gm.getLine().getSpawnCoordinate();
+		}
+		else{
+			transform.position = new Vector2(_gm.spawnPoint.transform.position.x - RespawnCoordinate.x, _gm.spawnPoint.transform.position.y - RespawnCoordinate.y);
+		}
+	}
+
+	public Vector3 getSpawnCoordinate(){
+		return new Vector3(transform.position.x - RespawnCoordinate.x, transform.position.y - RespawnCoordinate.y, transform.position.z);
+	}
+
+	public void destroyGameObject(){
+		Destroy(this.gameObject);
 	}
 }
