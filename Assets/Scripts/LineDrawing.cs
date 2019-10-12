@@ -36,6 +36,9 @@ public class LineDrawing : MonoBehaviour
 			return;
 		}
 
+		if(Input.GetMouseButtonDown(0)){
+			Debug.Log(isMouseOverDrawTable());
+		}
 		if (Input.GetMouseButtonDown (0) && isMouseOverDrawTable()) {
 			CreateNewLine ();
 		}
@@ -47,7 +50,8 @@ public class LineDrawing : MonoBehaviour
 		}
 
 		if (currentLine != null) {
-			currentLine.AddPoint (Camera.main.ScreenToWorldPoint (new Vector3(Input.mousePosition.x,Input.mousePosition.y - 200, 0)));
+			//currentLine.AddPoint (Camera.main.ScreenToWorldPoint (new Vector3(Input.mousePosition.x,Input.mousePosition.y - 200, 0)));
+			currentLine.AddPoint (GetWorldPositionOnPlane(Input.mousePosition, 0));
 
 			if (currentLine.ReachedPointsLimit ()) {
 				EnableLine();
@@ -55,6 +59,13 @@ public class LineDrawing : MonoBehaviour
 		}
 	}
 
+	 public Vector3 GetWorldPositionOnPlane(Vector3 screenPosition, float z) {
+		Ray ray = Camera.main.ScreenPointToRay(screenPosition);
+		Plane xy = new Plane(Vector3.forward, new Vector3(0, 0, z));
+		float distance;
+		xy.Raycast(ray, out distance);
+		return ray.GetPoint(distance);
+ 	}
     private bool isMouseOverDrawTable(){
         return EventSystem.current.IsPointerOverGameObject(0);
     }
